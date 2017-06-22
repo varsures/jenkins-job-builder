@@ -299,9 +299,12 @@ def sidebar(registry, xml_parent, data):
     else:
         links = sidebar.find('links')
     action = XML.SubElement(links, 'hudson.plugins.sidebar__link.LinkAction')
-    XML.SubElement(action, 'url').text = str(data.get('url', ''))
-    XML.SubElement(action, 'text').text = str(data.get('text', ''))
-    XML.SubElement(action, 'icon').text = str(data.get('icon', ''))
+    mapping = [
+        ('url', 'url', ''),
+        ('text', 'text', ''),
+        ('icon', 'icon', ''),
+    ]
+    helpers.convert_mapping_to_xml(action, data, mapping, fail_required=True)
 
 
 def inject(registry, xml_parent, data):
@@ -586,8 +589,12 @@ def batch_tasks(registry, xml_parent, data):
     for task in data:
         batch_task = XML.SubElement(tasks,
                                     'hudson.plugins.batch__task.BatchTask')
-        XML.SubElement(batch_task, 'name').text = task['name']
-        XML.SubElement(batch_task, 'script').text = task['script']
+        mapping = [
+            ('name', 'name', None),
+            ('script', 'script', None),
+        ]
+        helpers.convert_mapping_to_xml(
+            batch_task, task, mapping, fail_required=True)
 
 
 def heavy_job(registry, xml_parent, data):
@@ -609,8 +616,8 @@ def heavy_job(registry, xml_parent, data):
     heavyjob = XML.SubElement(xml_parent,
                               'hudson.plugins.'
                               'heavy__job.HeavyJobProperty')
-    XML.SubElement(heavyjob, 'weight').text = str(
-        data.get('weight', 1))
+    mapping = [('weight', 'weight', 1)]
+    helpers.convert_mapping_to_xml(heavyjob, data, mapping, fail_required=True)
 
 
 def slave_utilization(registry, xml_parent, data):
