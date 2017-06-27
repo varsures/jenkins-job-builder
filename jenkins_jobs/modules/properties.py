@@ -63,10 +63,12 @@ def builds_chain_fingerprinter(registry, xml_parent, data):
                                    'org.jenkinsci.plugins.'
                                    'buildschainfingerprinter.'
                                    'AutomaticFingerprintJobProperty')
-    XML.SubElement(fingerprinter, 'isPerBuildsChainEnabled').text = str(
-        data.get('per-builds-chain', False)).lower()
-    XML.SubElement(fingerprinter, 'isPerJobsChainEnabled').text = str(
-        data.get('per-job-chain', False)).lower()
+    mapping = [
+        ('per-builds-chain', 'isPerBuildsChainEnabled', False),
+        ('per-job-chain', 'isPerJobsChainEnabled', False),
+    ]
+    helpers.convert_mapping_to_xml(
+        fingerprinter, data, mapping, fail_required=True)
 
 
 def ownership(registry, xml_parent, data):
@@ -219,9 +221,9 @@ def least_load(registry, xml_parent, data):
     least = XML.SubElement(xml_parent,
                            'org.bstick12.jenkinsci.plugins.leastload.'
                            'LeastLoadDisabledProperty')
-
-    XML.SubElement(least, 'leastLoadDisabled').text = str(
-        data.get('disabled', True)).lower()
+    mapping = [
+        ('disabled', 'leastLoadDisabled', True)]
+    helpers.convert_mapping_to_xml(least, data, mapping, fail_required=True)
 
 
 def throttle(registry, xml_parent, data):
@@ -466,11 +468,9 @@ def priority_sorter(registry, xml_parent, data):
     priority_sorter_tag = XML.SubElement(xml_parent,
                                          'hudson.queueSorter.'
                                          'PrioritySorterJobProperty')
-    try:
-        XML.SubElement(priority_sorter_tag, 'priority').text = str(
-            data['priority'])
-    except KeyError as e:
-        raise MissingAttributeError(e)
+    mapping = [('priority', 'priority', None)]
+    helpers.convert_mapping_to_xml(
+        priority_sorter_tag, data, mapping, fail_required=True)
 
 
 def build_blocker(registry, xml_parent, data):
