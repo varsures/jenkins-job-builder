@@ -491,7 +491,7 @@ def set_bindings_for_extended_choice(parameters_list):
     string_of_parameters = ''
     for each_parameter in parameters_list:
             keys = each_parameter.keys()
-            string_of_parameters = string_of_parameters + each_parameter[keys[0]] + '=' + each_parameter[keys[1]] + '\n'
+            string_of_parameters = string_of_parameters + str(each_parameter[keys[0]]) + '=' + str(each_parameter[keys[1]]) + '\n'
     return string_of_parameters
 
 
