@@ -162,8 +162,9 @@ def jclouds(registry, xml_parent, data):
         raise JenkinsJobsException("blobstore requires '%s' to be set"
                                    % e.args[0])
 
-    XML.SubElement(deployer_entry, 'keepHierarchy').text = str(
-        data.get('hierarchy', False)).lower()
+    mapping = [('hierarchy', 'keepHierarchy', False)]
+    helpers.convert_mapping_to_xml(
+        deployer_entry, data, mapping, fail_required=True)
 
 
 def javadoc(registry, xml_parent, data):
@@ -1373,13 +1374,19 @@ def _violations_add_entry(xml_parent, name, data):
     pattern = data.get('pattern', None)
 
     entry = XML.SubElement(xml_parent, 'entry')
-    XML.SubElement(entry, 'string').text = name
+    mapping = [('', 'string', name)]
+    helpers.convert_mapping_to_xml(entry, data, mapping, fail_required=True)
+
     tconfig = XML.SubElement(entry, 'hudson.plugins.violations.TypeConfig')
-    XML.SubElement(tconfig, 'type').text = name
-    XML.SubElement(tconfig, 'min').text = str(vmin)
-    XML.SubElement(tconfig, 'max').text = str(vmax)
-    XML.SubElement(tconfig, 'unstable').text = str(vunstable)
-    XML.SubElement(tconfig, 'usePattern').text = 'false'
+    mapping = [
+        ('', 'type', name),
+        ('', 'min', str(vmin)),
+        ('', 'max', str(vmax)),
+        ('', 'unstable', str(vunstable)),
+        ('', 'usePattern', 'false'),
+    ]
+    helpers.convert_mapping_to_xml(tconfig, data, mapping, fail_required=True)
+
     if pattern:
         XML.SubElement(tconfig, 'pattern').text = pattern
     else:
@@ -2073,6 +2080,7 @@ def aggregate_tests(registry, xml_parent, data):
     Aggregate downstream test results
 
     :arg bool include-failed-builds: whether to include failed builds
+        (default false)
 
     Example:
 
@@ -2082,8 +2090,8 @@ def aggregate_tests(registry, xml_parent, data):
     """
     agg = XML.SubElement(xml_parent,
                          'hudson.tasks.test.AggregatedTestResultPublisher')
-    XML.SubElement(agg, 'includeFailedBuilds').text = str(data.get(
-        'include-failed-builds', False)).lower()
+    mapping = [('include-failed-builds', 'includeFailedBuilds', False)]
+    helpers.convert_mapping_to_xml(agg, data, mapping, fail_required=True)
 
 
 def aggregate_flow_tests(registry, xml_parent, data):
@@ -2104,8 +2112,8 @@ def aggregate_flow_tests(registry, xml_parent, data):
     """
     agg_flow = XML.SubElement(xml_parent, 'org.zeroturnaround.jenkins.'
                               'flowbuildtestaggregator.FlowTestAggregator')
-    XML.SubElement(agg_flow, 'showTestResultTrend').text = str(
-        data.get('show-test-results-trend', True)).lower()
+    mapping = [('show-test-results-trend', 'showTestResultTrend', True)]
+    helpers.convert_mapping_to_xml(agg_flow, data, mapping, fail_required=True)
 
 
 def cppcheck(registry, xml_parent, data):
@@ -3121,10 +3129,11 @@ def artifactory(registry, xml_parent, data):
     details = XML.SubElement(artifactory, 'details')
     helpers.artifactory_common_details(details, data)
 
-    XML.SubElement(details, 'repositoryKey').text = data.get(
-        'release-repo-key', '')
-    XML.SubElement(details, 'snapshotsRepositoryKey').text = data.get(
-        'snapshot-repo-key', '')
+    mapping = [
+        ('release-repo-key', 'repositoryKey', ''),
+        ('snapshot-repo-key', 'snapshotsRepositoryKey', ''),
+    ]
+    helpers.convert_mapping_to_xml(details, data, mapping, fail_required=True)
 
     plugin = XML.SubElement(details, 'stagingPlugin')
     XML.SubElement(plugin, 'pluginName').text = 'None'
@@ -5204,9 +5213,10 @@ def shining_panda(registry, xml_parent, data):
     shining_panda_plugin = XML.SubElement(
         xml_parent,
         'jenkins.plugins.shiningpanda.publishers.CoveragePublisher')
-    if 'html-reports-directory' in data:
-        XML.SubElement(shining_panda_plugin, 'htmlDir').text = str(
-            data['html-reports-directory'])
+
+    mapping = [('html-reports-directory', 'htmlDir', None)]
+    helpers.convert_mapping_to_xml(
+        shining_panda_plugin, data, mapping, fail_required=False)
 
 
 def downstream_ext(registry, xml_parent, data):
@@ -5614,9 +5624,9 @@ def gatling(registry, xml_parent, data):
        :language: yaml
     """
     gatling = XML.SubElement(
-        xml_parent,
-        'io.gatling.jenkins.GatlingPublisher')
-    XML.SubElement(gatling, 'enabled').text = 'true'
+        xml_parent, 'io.gatling.jenkins.GatlingPublisher')
+    mapping = [('', 'enabled', 'true')]
+    helpers.convert_mapping_to_xml(gatling, data, mapping, fail_required=True)
 
 
 def logstash(registry, xml_parent, data):
@@ -6372,16 +6382,10 @@ def hipchat(registry, xml_parent, data):
         ('notify-unstable', 'notifyUnstable', False),
         ('notify-failure', 'notifyFailure', False),
         ('notify-back-to-normal', 'notifyBackToNormal', False),
+        ('start-message', 'startJobMessage', None),
+        ('complete-message', 'completeJobMessage', None),
     ]
-    helpers.convert_mapping_to_xml(hipchat, data, mapping, fail_required=True)
-
-    # optional settings, so only add XML in if set.
-    if 'start-message' in data:
-        XML.SubElement(hipchat, 'startJobMessage').text = str(
-            data['start-message'])
-    if 'complete-message' in data:
-        XML.SubElement(hipchat, 'completeJobMessage').text = str(
-            data['complete-message'])
+    helpers.convert_mapping_to_xml(hipchat, data, mapping, fail_required=False)
 
 
 def slack(registry, xml_parent, data):
@@ -6548,21 +6552,15 @@ def phabricator(registry, xml_parent, data):
 
     root = XML.SubElement(xml_parent,
                           'com.uber.jenkins.phabricator.PhabricatorNotifier')
-
-    if 'comment-on-success' in data:
-        XML.SubElement(root, 'commentOnSuccess').text = str(
-            data.get('comment-on-success')).lower()
-    if 'uberalls-enabled' in data:
-        XML.SubElement(root, 'uberallsEnabled').text = str(
-            data.get('uberalls-enabled')).lower()
-    if 'comment-file' in data:
-        XML.SubElement(root, 'commentFile').text = data.get('comment-file')
-    if 'comment-size' in data:
-        XML.SubElement(root, 'commentSize').text = str(
-            data.get('comment-size'))
-    if 'comment-with-console-link-on-failure' in data:
-        XML.SubElement(root, 'commentWithConsoleLinkOnFailure').text = str(
-            data.get('comment-with-console-link-on-failure')).lower()
+    mapping = [
+        ('comment-on-success', 'commentOnSuccess', None),
+        ('uberalls-enabled', 'uberallsEnabled', None),
+        ('comment-file', 'commentFile', None),
+        ('comment-size', 'commentSize', None),
+        ('comment-with-console-link-on-failure',
+            'commentWithConsoleLinkOnFailure', None),
+    ]
+    helpers.convert_mapping_to_xml(root, data, mapping, fail_required=False)
 
 
 def jms_messaging(registry, xml_parent, data):
