@@ -871,8 +871,19 @@ def inject(registry, xml_parent, data):
         ('script-file', 'scriptFilePath', None),
         ('script-content', 'scriptContent', None),
     ]
-    convert_mapping_to_xml(info, data, mapping, fail_required=False)
-
+    # check the if properties-file or properties-content is ''
+    if ('properties-file' in data.keys()):
+        if (data['properties-file'] == ''):
+            return
+        else:
+            convert_mapping_to_xml(info, data, mapping, fail_required=False)
+    elif ('properties-content' in data.keys()):
+        if (data['properties-content'] == ''):
+            return
+        else:
+            convert_mapping_to_xml(info, data, mapping, fail_required=False)
+    else:
+        convert_mapping_to_xml(info, data, mapping, fail_required=False)
 
 def kmap(registry, xml_parent, data):
     """yaml: kmap
