@@ -38,7 +38,6 @@ from jenkins_jobs.errors import MissingAttributeError
 import jenkins_jobs.modules.base
 from jenkins_jobs.modules import hudson_model
 import jenkins_jobs.modules.helpers as helpers
-import jenkins_jobs.modules.builders as builders
 
 def allure(registry, xml_parent, data):
     """yaml: allure
