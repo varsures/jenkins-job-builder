@@ -110,27 +110,30 @@ def docker_custom_build_env(registry, xml_parent, data):
     image_type = data['image-type']
     if image_type == 'dockerfile':
         selectorobj.set('class', core_prefix + 'DockerfileImageSelector')
-        XML.SubElement(selectorobj, 'contextPath').text = data.get(
-            'context-path', '.')
-        XML.SubElement(selectorobj, 'dockerfile').text = data.get(
-            'dockerfile', 'Dockerfile')
+        dockerfile_mapping = [
+            ('context-path', 'contextPath', '.'),
+            ('dockerfile', 'dockerfile', 'Dockerfile')]
+        convert_mapping_to_xml(selectorobj, data,
+            dockerfile_mapping, fail_required=True)
+
     elif image_type == 'pull':
         selectorobj.set('class', core_prefix + 'PullDockerImageSelector')
-        XML.SubElement(selectorobj, 'image').text = data.get(
-            'image', '')
+        pull_mapping = [('image', 'image', '')]
+        convert_mapping_to_xml(selectorobj, data,
+            pull_mapping, fail_required=True)
 
     XML.SubElement(entry_xml, 'dockerInstallation').text = data.get(
         'docker-tool', 'Default')
 
     host = XML.SubElement(entry_xml, 'dockerHost')
     host.set('plugin', 'docker-commons')
-    if data.get('host'):
-        XML.SubElement(host, 'uri').text = data['host']
-    if data.get('credentials-id'):
-        XML.SubElement(host, 'credentialsId').text = data['credentials-id']
+    mapping_optional = [
+        ('host', 'uri', None),
+        ('credentials-id', 'credentialsId', None)]
+    convert_mapping_to_xml(host, data, mapping_optional, fail_required=False)
+
     XML.SubElement(entry_xml, 'dockerRegistryCredentials').text = data.get(
         'registry-credentials-id', '')
-
     volumesobj = XML.SubElement(entry_xml, 'volumes')
     volumes = data.get('volumes', [])
     if not volumes:
@@ -143,16 +146,14 @@ def docker_custom_build_env(registry, xml_parent, data):
                 'host-path', '')
             XML.SubElement(volumeobj, 'path').text = volume['volume'].get(
                 'path', '')
-
-    XML.SubElement(entry_xml, 'forcePull').text = str(data.get(
-        'force-pull', False)).lower()
-    XML.SubElement(entry_xml, 'privileged').text = str(data.get(
-        'privileged', False)).lower()
-    XML.SubElement(entry_xml, 'verbose').text = str(data.get(
-        'verbose', False)).lower()
-    XML.SubElement(entry_xml, 'group').text = data.get('group', '')
-    XML.SubElement(entry_xml, 'command').text = data.get('command', '/bin/cat')
-    XML.SubElement(entry_xml, 'net').text = data.get('net', 'bridge')
+    mapping = [
+        ('force-pull', 'forcePull', False),
+        ('privileged', 'privileged', False),
+        ('verbose', 'verbose', False),
+        ('group', 'group', ''),
+        ('command', 'command', '/bin/cat'),
+        ('net', 'net', 'bridge')]
+    convert_mapping_to_xml(entry_xml, data, mapping, fail_required=True)
 
 
 def ci_skip(registry, xml_parent, data):
@@ -459,11 +460,8 @@ def ansicolor(registry, xml_parent, data):
     cwrapper = XML.SubElement(
         xml_parent,
         'hudson.plugins.ansicolor.AnsiColorBuildWrapper')
-
-    # Optional colormap
-    colormap = data.get('colormap')
-    if colormap:
-        XML.SubElement(cwrapper, 'colorMapName').text = colormap
+    mapping = [('colormap', 'colorMapName', None)]
+    convert_mapping_to_xml(cwrapper, data, mapping, fail_required=False)
 
 
 def build_keeper(registry, xml_parent, data):
@@ -613,27 +611,28 @@ def workspace_cleanup(registry, xml_parent, data):
     p = XML.SubElement(xml_parent,
                        'hudson.plugins.ws__cleanup.PreBuildCleanup')
     p.set("plugin", "ws-cleanup")
+
     if "include" in data or "exclude" in data:
         patterns = XML.SubElement(p, 'patterns')
 
+    ptrn = XML.SubElement(patterns, 'hudson.plugins.ws__cleanup.Pattern')
     for inc in data.get("include", []):
-        ptrn = XML.SubElement(patterns, 'hudson.plugins.ws__cleanup.Pattern')
-        XML.SubElement(ptrn, 'pattern').text = inc
-        XML.SubElement(ptrn, 'type').text = "INCLUDE"
+        mapping = [
+            ('', 'pattern', inc),
+            ('', 'type', "INCLUDE")]
+        convert_mapping_to_xml(ptrn, data, mapping, fail_required=True)
 
     for exc in data.get("exclude", []):
-        ptrn = XML.SubElement(patterns, 'hudson.plugins.ws__cleanup.Pattern')
-        XML.SubElement(ptrn, 'pattern').text = exc
-        XML.SubElement(ptrn, 'type').text = "EXCLUDE"
+        mapping = [
+            ('', 'pattern', exc),
+            ('', 'type', "EXCLUDE")]
+        convert_mapping_to_xml(ptrn, data, mapping, fail_required=True)
 
-    deldirs = XML.SubElement(p, 'deleteDirs')
-    deldirs.text = str(data.get("dirmatch", False)).lower()
-
-    XML.SubElement(p, 'cleanupParameter').text = str(
-        data.get('check-parameter', ''))
-
-    XML.SubElement(p, 'externalDelete').text = str(
-        data.get('external-deletion-command', ''))
+    mapping = [
+        ("dirmatch", 'deleteDirs', False),
+        ('check-parameter', 'cleanupParameter', ''),
+        ('external-deletion-command', 'externalDelete', '')]
+    convert_mapping_to_xml(p, data, mapping, fail_required=True)
 
 
 def m2_repository_cleanup(registry, xml_parent, data):
@@ -898,19 +897,14 @@ def copy_to_slave(registry, xml_parent, data):
 
     XML.SubElement(cs, 'includes').text = ','.join(data.get('includes', ['']))
     XML.SubElement(cs, 'excludes').text = ','.join(data.get('excludes', ['']))
-    XML.SubElement(cs, 'flatten').text = \
-        str(data.get('flatten', False)).lower()
-    XML.SubElement(cs, 'includeAntExcludes').text = \
-        str(data.get('include-ant-excludes', False)).lower()
 
-    rel = str(data.get('relative-to', 'userContent'))
-    opt = ('home', 'somewhereElse', 'userContent', 'workspace')
-    if rel not in opt:
-        raise ValueError('relative-to must be one of %r' % opt)
-    XML.SubElement(cs, 'relativeTo').text = rel
-
-    # seems to always be false, can't find it in source code
-    XML.SubElement(cs, 'hudsonHomeRelative').text = 'false'
+    locations = ['home', 'somewhereElse', 'userContent', 'workspace']
+    mapping = [
+        ('flatten', 'flatten', False),
+        ('include-ant-excludes', 'includeAntExcludes', False),
+        ('relative-to', 'relativeTo', 'userContent', locations),
+        ('', 'hudsonHomeRelative', False)]
+    convert_mapping_to_xml(cs, data, mapping, fail_required=True)
 
 
 def inject(registry, xml_parent, data):
@@ -963,10 +957,10 @@ def inject_ownership_variables(registry, xml_parent, data):
     """
     ownership = XML.SubElement(xml_parent, 'com.synopsys.arc.jenkins.plugins.'
                                'ownership.wrappers.OwnershipBuildWrapper')
-    XML.SubElement(ownership, 'injectNodeOwnership').text = \
-        str(data.get('node-variables', False)).lower()
-    XML.SubElement(ownership, 'injectJobOwnership').text = \
-        str(data.get('job-variables', False)).lower()
+    mapping = [
+        ('node-variables', 'injectNodeOwnership', False),
+        ('job-variables', 'injectJobOwnership', False)]
+    convert_mapping_to_xml(ownership, data, mapping, fail_required=True)
 
 
 def inject_passwords(registry, xml_parent, data):
@@ -1044,21 +1038,17 @@ def env_script(registry, xml_parent, data):
 
     """
     el = XML.SubElement(xml_parent, 'com.lookout.jenkins.EnvironmentScript')
-    XML.SubElement(el, 'script').text = data.get('script-content', '')
 
     valid_script_types = {
         'unix-script': 'unixScript',
         'power-shell': 'powerShell',
         'batch-script': 'batchScript',
     }
-    script_type = data.get('script-type', 'unix-script')
-    if script_type not in valid_script_types:
-        raise InvalidAttributeError('script-type', script_type,
-                                    valid_script_types)
-    XML.SubElement(el, 'scriptType').text = valid_script_types[script_type]
-
-    only_on_parent = str(data.get('only-run-on-parent', False)).lower()
-    XML.SubElement(el, 'onlyRunOnParent').text = only_on_parent
+    mapping = [
+        ('script-content', 'script', ''),
+        ('script-type', 'scriptType', 'unix-script', valid_script_types),
+        ('only-run-on-parent', 'onlyRunOnParent', False)]
+    convert_mapping_to_xml(el, data, mapping, fail_required=True)
 
 
 def jclouds(registry, xml_parent, data):
@@ -1463,34 +1453,22 @@ def logstash(registry, xml_parent, data):
                               'LogstashBuildWrapper')
     logstash.set('plugin', 'logstash@0.8.0')
 
-    redis_bool = XML.SubElement(logstash, 'useRedis')
-    redis_bool.text = str(data.get('use-redis', True)).lower()
+    mapping = [('use-redis', 'useRedis', True)]
+    convert_mapping_to_xml(logstash, data, mapping, fail_required=True)
 
     if data.get('use-redis'):
         redis_config = data.get('redis', {})
         redis_sub_element = XML.SubElement(logstash, 'redis')
 
-        host_sub_element = XML.SubElement(redis_sub_element, 'host')
-        host_sub_element.text = str(
-            redis_config.get('host', 'localhost'))
-
-        port_sub_element = XML.SubElement(redis_sub_element, 'port')
-        port_sub_element.text = str(redis_config.get('port', '6379'))
-
-        database_numb_sub_element = XML.SubElement(redis_sub_element, 'numb')
-        database_numb_sub_element.text = \
-            str(redis_config.get('database-number', '0'))
-
-        database_pass_sub_element = XML.SubElement(redis_sub_element, 'pass')
-        database_pass_sub_element.text = \
-            str(redis_config.get('database-password', ''))
-
-        data_type_sub_element = XML.SubElement(redis_sub_element, 'dataType')
-        data_type_sub_element.text = \
-            str(redis_config.get('data-type', 'list'))
-
-        key_sub_element = XML.SubElement(redis_sub_element, 'key')
-        key_sub_element.text = str(redis_config.get('key', 'logstash'))
+        mapping = [
+            ('host', 'host', 'localhost'),
+            ('port', 'port', '6379'),
+            ('database-number', 'numb', '0'),
+            ('database-password', 'pass', ''),
+            ('data-type', 'dataType', 'list'),
+            ('key', 'key', 'logstash')]
+        convert_mapping_to_xml(redis_sub_element,
+            redis_config, mapping, fail_required=True)
 
 
 def mongo_db(registry, xml_parent, data):
@@ -1606,10 +1584,10 @@ def exclusion(registry, xml_parent, data):
     ids = XML.SubElement(exl, 'ids')
     resources = data.get('resources', [])
     for resource in resources:
-        dit = \
-            XML.SubElement(ids,
+        dit = XML.SubElement(ids,
                            'org.jvnet.hudson.plugins.exclusion.DefaultIdType')
-        XML.SubElement(dit, 'name').text = str(resource).upper()
+        mapping = [('', 'name', resource.upper())]
+        convert_mapping_to_xml(dit, data, mapping, fail_required=True)
 
 
 def ssh_agent_credentials(registry, xml_parent, data):
@@ -1828,7 +1806,7 @@ def nodejs_installator(registry, xml_parent, data):
     Requires the Jenkins :jenkins-wiki:`NodeJS Plugin
     <NodeJS+Plugin>`.
 
-    :arg str name: nodejs installation name
+    :arg str name: nodejs installation name (required)
 
     Example:
 
@@ -1838,11 +1816,8 @@ def nodejs_installator(registry, xml_parent, data):
     npm_node = XML.SubElement(xml_parent,
                               'jenkins.plugins.nodejs.tools.'
                               'NpmPackagesBuildWrapper')
-
-    try:
-        XML.SubElement(npm_node, 'nodeJSInstallationName').text = data['name']
-    except KeyError as e:
-        raise MissingAttributeError(e.args[0])
+    mapping = [('name', 'nodeJSInstallationName', None)]
+    convert_mapping_to_xml(npm_node, data, mapping, fail_required=True)
 
 
 def xvnc(registry, xml_parent, data):
@@ -1892,8 +1867,8 @@ def job_log_logger(registry, xml_parent, data):
     top = XML.SubElement(xml_parent,
                          'org.jenkins.ci.plugins.jobloglogger.'
                          'JobLogLoggerBuildWrapper')
-    XML.SubElement(top, 'suppressEmpty').text = str(
-        data.get('suppress-empty', True)).lower()
+    mapping = [('suppress-empty', 'suppressEmpty', True)]
+    convert_mapping_to_xml(top, data, mapping, fail_required=True)
 
 
 def xvfb(registry, xml_parent, data):

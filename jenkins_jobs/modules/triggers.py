@@ -835,12 +835,11 @@ def jms_messaging(registry, xml_parent, data):
         for check in checks:
             msgcheck = XML.SubElement(msgchecks, namespace
                                       + 'messaging.checks.MsgCheck')
-            if check['field'] is '':
-                raise JenkinsJobsException('At least one '
-                                           'field must be provided')
-            XML.SubElement(msgcheck, 'field').text = check['field']
-            XML.SubElement(msgcheck,
-                           'expectedValue').text = check['expected-value']
+            mapping = [
+                ('field', 'field', ''),
+                ('expected-value', 'expectedValue', '')]
+            convert_mapping_to_xml(
+                msgcheck, check, mapping, fail_required=True)
 
 
 def timed(registry, xml_parent, data):
@@ -1765,14 +1764,10 @@ def rabbitmq(registry, xml_parent, data):
         xml_parent,
         'org.jenkinsci.plugins.rabbitmqbuildtrigger.'
         'RemoteBuildTrigger')
-
-    XML.SubElement(rabbitmq, 'spec').text = ''
-
-    try:
-        XML.SubElement(rabbitmq, 'remoteBuildToken').text = str(
-            data.get('token'))
-    except KeyError as e:
-        raise MissingAttributeError(e.args[0])
+    mapping = [
+        ('', 'spec', ''),
+        ('token', 'remoteBuildToken', None)]
+    convert_mapping_to_xml(rabbitmq, data, mapping, fail_required=True)
 
 
 def parameterized_timer(parser, xml_parent, data):
@@ -1795,14 +1790,10 @@ def parameterized_timer(parser, xml_parent, data):
         xml_parent,
         'org.jenkinsci.plugins.parameterizedscheduler.'
         'ParameterizedTimerTrigger')
-
-    XML.SubElement(param_timer, 'spec').text = ''
-
-    try:
-        XML.SubElement(param_timer, 'parameterizedSpecification').text = str(
-            data.get('cron'))
-    except KeyError as e:
-        raise MissingAttributeError(e)
+    mapping = [
+        ('', 'spec', ''),
+        ('cron', 'parameterizedSpecification', None)]
+    convert_mapping_to_xml(param_timer, data, mapping, fail_required=True)
 
 
 class Triggers(jenkins_jobs.modules.base.Base):
