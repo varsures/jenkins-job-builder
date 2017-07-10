@@ -882,6 +882,16 @@ def inject(registry, xml_parent, data):
             return
         else:
             convert_mapping_to_xml(info, data, mapping, fail_required=False)
+    elif ('script-file' in data.keys()):
+        if (data['script-file'] == ''):
+            return
+        else:
+            convert_mapping_to_xml(info, data, mapping, fail_required=False)
+    elif ('script-content' in data.keys()):
+        if (data['script-content'] == ''):
+            return
+        else:
+            convert_mapping_to_xml(info, data, mapping, fail_required=False)
     else:
         convert_mapping_to_xml(info, data, mapping, fail_required=False)
 
